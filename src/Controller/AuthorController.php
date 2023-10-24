@@ -3,12 +3,15 @@
 namespace App\Controller;
 
 use App\Entity\Author;
+use App\Repository\BookRepository;
 use App\Repository\AuthorRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class AuthorController extends AbstractController
@@ -66,5 +69,29 @@ class AuthorController extends AbstractController
         $em->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Cette méthode permet de créer un nouvel auteur. Elle ne permet pas 
+     * d'associer directement des livres à cet auteur. 
+     *
+     * @param Request $request
+     * @param SerializerInterface $serializer
+     * @param EntityManagerInterface $em
+     * @param UrlGeneratorInterface $urlGenerator
+     * @return JsonResponse
+     */
+    #[Route('/api/authors', name: "createAuthor", methods: ['POST'])]
+    public function createBook(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator): JsonResponse
+    {
+        $author = $serializer->deserialize($request->getContent(), Author::class, 'json');
+        $em->persist($author);
+        $em->flush();
+
+        $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => 'getAuthors']);
+
+        $location = $urlGenerator->generate('detailAuthor', ['id' => $author->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return new JsonResponse($jsonAuthor, Response::HTTP_CREATED, ["Location" => $location], true);
     }
 }
