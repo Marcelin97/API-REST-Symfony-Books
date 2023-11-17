@@ -15,6 +15,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+// use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class BookController extends AbstractController
 {
@@ -77,6 +79,7 @@ class BookController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/books', name: "createBook", methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un livre')]
     public function createBook(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, AuthorRepository $authorRepository, ValidatorInterface $validator): JsonResponse
     {
         $book = $serializer->deserialize($request->getContent(), Book::class, 'json');
@@ -115,8 +118,11 @@ class BookController extends AbstractController
      * @param EntityManagerInterface $em
      * @param AuthorRepository $authorRepository
      * @return JsonResponse
-     */#[Route('/api/books/{id}', name: "updateBook", methods: ['PUT'])]
-    public function updateBook(Request $request, SerializerInterface $serializer, Book $currentBook, EntityManagerInterface $em, AuthorRepository $authorRepository): JsonResponse
+     */
+     #[Route('/api/books/{id}', name: "updateBook", methods: ['PUT'])]
+     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour éditer un livre')]
+
+    public function updateBook(Request $request, SerializerInterface $serializer, Book $currentBook, EntityManagerInterface $em, AuthorRepository $authorRepository, ValidatorInterface $validator): JsonResponse
     {
         $updatedBook = $serializer->deserialize(
             $request->getContent(),
@@ -124,12 +130,21 @@ class BookController extends AbstractController
             'json',
             [AbstractNormalizer::OBJECT_TO_POPULATE => $currentBook]
         );
+
+        // On vérifie les erreurs
+        $errors = $validator->validate($updatedBook);
+        if ($errors->count() > 0) {
+            return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
+        }
+
         $content = $request->toArray();
         $idAuthor = $content['idAuthor'] ?? -1;
+
         $updatedBook->setAuthor($authorRepository->find($idAuthor));
 
         $em->persist($updatedBook);
         $em->flush();
+
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 }
