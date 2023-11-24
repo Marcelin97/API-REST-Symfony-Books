@@ -28,10 +28,14 @@ class BookController extends AbstractController
      * @return JsonResponse
      */
     #[Route('/api/books', name: 'book', methods: ['GET'])]
-    public function getBookList(BookRepository $bookRepository, SerializerInterface $serializer): JsonResponse
+    public function getBookList(BookRepository $bookRepository, SerializerInterface $serializer, Request $request): JsonResponse
     {
-        $bookList = $bookRepository->findAll();
+        $page = $request->get('page', 1);
+        $limit = $request->get('limit', 3);
+        $bookList = $bookRepository->findAllWithPagination($page, $limit);
+
         $jsonBookList = $serializer->serialize($bookList, 'json', ['groups' => 'getBooks']);
+
         return new JsonResponse($jsonBookList, Response::HTTP_OK, [], true);
     }
 
@@ -119,8 +123,8 @@ class BookController extends AbstractController
      * @param AuthorRepository $authorRepository
      * @return JsonResponse
      */
-     #[Route('/api/books/{id}', name: "updateBook", methods: ['PUT'])]
-     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour éditer un livre')]
+    #[Route('/api/books/{id}', name: "updateBook", methods: ['PUT'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour éditer un livre')]
 
     public function updateBook(Request $request, SerializerInterface $serializer, Book $currentBook, EntityManagerInterface $em, AuthorRepository $authorRepository, ValidatorInterface $validator): JsonResponse
     {
