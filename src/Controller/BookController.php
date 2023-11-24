@@ -70,8 +70,10 @@ class BookController extends AbstractController
     public function deleteBook(Book $book, EntityManagerInterface $em, TagAwareCacheInterface $cachePool): JsonResponse
     {
         $cachePool->invalidateTags(["booksCache"]);
+
         $em->remove($book);
         $em->flush();
+
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 
@@ -90,7 +92,7 @@ class BookController extends AbstractController
      */
     #[Route('/api/books', name: "createBook", methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un livre')]
-    public function createBook(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, AuthorRepository $authorRepository, ValidatorInterface $validator): JsonResponse
+    public function createBook(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, AuthorRepository $authorRepository, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
         $book = $serializer->deserialize($request->getContent(), Book::class, 'json');
         // On vérifie les erreurs
@@ -112,6 +114,9 @@ class BookController extends AbstractController
         $em->persist($book);
         $em->flush();
 
+        // On vide le cache. 
+        $cache->invalidateTags(["booksCache"]);
+
         $jsonBook = $serializer->serialize($book, 'json', ['groups' => 'getBooks']);
 
         $location = $urlGenerator->generate('detailBook', ['id' => $book->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
@@ -132,7 +137,7 @@ class BookController extends AbstractController
     #[Route('/api/books/{id}', name: "updateBook", methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour éditer un livre')]
 
-    public function updateBook(Request $request, SerializerInterface $serializer, Book $currentBook, EntityManagerInterface $em, AuthorRepository $authorRepository, ValidatorInterface $validator): JsonResponse
+    public function updateBook(Request $request, SerializerInterface $serializer, Book $currentBook, EntityManagerInterface $em, AuthorRepository $authorRepository, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
         $updatedBook = $serializer->deserialize(
             $request->getContent(),
@@ -154,6 +159,9 @@ class BookController extends AbstractController
 
         $em->persist($updatedBook);
         $em->flush();
+
+        // On vide le cache. 
+        $cache->invalidateTags(["booksCache"]);
 
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
