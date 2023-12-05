@@ -19,6 +19,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Service\VersioningService;
 
 class BookController extends AbstractController
 {
@@ -56,10 +57,11 @@ class BookController extends AbstractController
      * @return JsonResponse
      */
     #[Route("/api/books/{id}", name: "detailBook", methods: ['GET'])]
-    public function getDetailBook(SerializerInterface $serializer, Book $book): JsonResponse
+    public function getDetailBook(SerializerInterface $serializer, Book $book, VersioningService $versioningService): JsonResponse
     {
+        $version = $versioningService->getVersion();
         $context = SerializationContext::create()->setGroups(["getBooks"]);
-        $context->setVersion("2.0");
+        $context->setVersion($version);
         $jsonBook = $serializer->serialize($book, 'json', $context);
         return new JsonResponse($jsonBook, Response::HTTP_OK, [], true);
     }
