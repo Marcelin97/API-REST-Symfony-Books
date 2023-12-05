@@ -59,6 +59,7 @@ class BookController extends AbstractController
     public function getDetailBook(SerializerInterface $serializer, Book $book): JsonResponse
     {
         $context = SerializationContext::create()->setGroups(["getBooks"]);
+        $context->setVersion("2.0");
         $jsonBook = $serializer->serialize($book, 'json', $context);
         return new JsonResponse($jsonBook, Response::HTTP_OK, [], true);
     }
