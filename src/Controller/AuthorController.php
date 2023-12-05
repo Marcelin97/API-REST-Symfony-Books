@@ -11,13 +11,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 // use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
 
 class AuthorController extends AbstractController
 {
@@ -40,7 +41,9 @@ class AuthorController extends AbstractController
             $item->tag("booksCache");
 
             $authorList = $authorRepository->findAllWithPagination($page, $limit);
-            return $serializer->serialize($authorList, 'json',  ['groups' => 'getAuthors']);
+            $context = SerializationContext::create()->setGroups(["getAuthors"]);
+
+            return $serializer->serialize($authorList, 'json',  $context);
         });
 
         return new JsonResponse($jsonAuthorList, Response::HTTP_OK, [], true);
@@ -56,7 +59,9 @@ class AuthorController extends AbstractController
     #[Route('/api/authors/{id}', name: 'detailAuthor', methods: ['GET'])]
     public function getDetailAuthor(Author $author, SerializerInterface $serializer): JsonResponse
     {
-        $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => 'getAuthors']);
+        $context = SerializationContext::create()->setGroups(["getAuthors"]);
+        $jsonAuthor = $serializer->serialize($author, 'json', $context);
+
         return new JsonResponse($jsonAuthor, Response::HTTP_OK, [], true);
     }
 
@@ -101,7 +106,7 @@ class AuthorController extends AbstractController
      */
     #[Route('/api/authors', name: "createAuthor", methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un auteur')]
-    public function createBook(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
+    public function createAuthor(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator, TagAwareCacheInterface $cache): JsonResponse
     {
         $author = $serializer->deserialize($request->getContent(), Author::class, 'json');
 
@@ -116,8 +121,8 @@ class AuthorController extends AbstractController
 
         $cache->invalidateTags(["booksCache"]);
 
-        $jsonAuthor = $serializer->serialize($author, 'json', ['groups' => 'getAuthors']);
-
+        $context = SerializationContext::create()->setGroups(["getAuthors"]);
+        $jsonAuthor = $serializer->serialize($author, 'json', $context);
         $location = $urlGenerator->generate('detailAuthor', ['id' => $author->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
         return new JsonResponse($jsonAuthor, Response::HTTP_CREATED, ["Location" => $location], true);
@@ -133,7 +138,7 @@ class AuthorController extends AbstractController
      * @param EntityManagerInterface $em
      * @return JsonResponse
      */
-    #[Route('/api/authors/{id}', name: "updateAuthors", methods: ['PUT'])]
+    #[Route('/api/authors/{id}', name: "updateAuthor", methods: ['PUT'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour éditer un auteur')]
     public function updateAuthor(
         Request $request,
@@ -150,11 +155,14 @@ class AuthorController extends AbstractController
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
 
-        $updatedAuthor = $serializer->deserialize($request->getContent(), Author::class, 'json', [AbstractNormalizer::OBJECT_TO_POPULATE => $currentAuthor]);
+        $updatedAuthor = $serializer->deserialize($request->getContent(), Author::class, 'json');
+
+        $currentAuthor->setFirstName($updatedAuthor->getFirstName());
+        $currentAuthor->setLastName($updatedAuthor->getLastName());
+
         $em->persist($updatedAuthor);
         $em->flush();
         $cache->invalidateTags(["booksCache"]);
-
 
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }

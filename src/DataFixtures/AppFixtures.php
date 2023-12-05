@@ -20,7 +20,6 @@ class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-
         // Création d'un user "normal"
         $user = new User();
         $user->setEmail("user@bookapi.com");
@@ -54,6 +53,7 @@ class AppFixtures extends Fixture
             $livre->setCoverText('Quatrième de couverture numéro : ' . $i);
             // on lie le livre à un auteur pris au hasard ds le tableau des auteurs
             $livre->setAuthor($listAuthor[array_rand($listAuthor)]);
+            $livre->setComment("Commentaire du bibliothécaire " . $i);
             $manager->persist($livre);
         }
 

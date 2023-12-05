@@ -53,13 +53,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return (string) $this->email;
     }
-        /**
+    /**
      * Méthode getUsername qui permet de retourner le champ qui est utilisé pour l'authentification.
      * Cette méthode très simple est juste un alias vers $this->getUserIdentifier()
      *
      * @return string
      */
-    public function getUsername(): string {
+    public function getUsername(): string
+    {
         return $this->getUserIdentifier();
     }
 
